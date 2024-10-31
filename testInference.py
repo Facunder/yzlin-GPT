@@ -1,7 +1,7 @@
 import os
 import tiktoken
 import torch
-from model import GPT,Model_args
+from model import yzlinGPT,ModelArgs
 import hashlib
 
 # *To solve the http timeout problem of server links, use pre-downloaded files*
@@ -14,24 +14,24 @@ os.environ["TIKTOKEN_CACHE_DIR"] = tiktoken_cache_dir
 assert os.path.exists(os.path.join(tiktoken_cache_dir, cache_key_1))
 assert os.path.exists(os.path.join(tiktoken_cache_dir, cache_key_2))
 
-checkpoint_save_dir = './checkpoints'
-device = 'cuda'
+checkpoint_save_dir = './checkpoint'
+device = 'cuda:2'
 device_type = 'cuda'
 dtype = 'bfloat16'
 ptdtype = {'float32': torch.float32, 'bfloat16': torch.bfloat16, 'float16': torch.float16}[dtype]
 
-# generate参数
-top_k = 30
-tempreture = 0.3 # bigger means more random
+# generate params
+top_k = 20
+temperature = 0.5 # bigger means more random
 num_samples = 1 # sample nums
-max_new_tokens = 128
+max_new_tokens = 20
 
 # load checkpoint
 print(f"load checkpoint from {checkpoint_save_dir}")
 ckpt_path = os.path.join(checkpoint_save_dir,'checkpoint.pt')
 checkpoint = torch.load(ckpt_path, map_location=device)
 args = checkpoint['model_args']
-model = GPT(Model_args(**args))
+model = yzlinGPT(ModelArgs(**args))
 state_dict = checkpoint['model']
 
 # according to NanoGPT debug
@@ -54,9 +54,48 @@ start_ids = encode(start)
 x = torch.tensor(start_ids,dtype=torch.long,device=device).unsqueeze(0)
 
 ctx = torch.amp.autocast(device_type=device_type, dtype=ptdtype)
+
+def printFrontMatter():
+    print("*"*82)
+    letters = {
+        'Y': ["*\\     /", "* \\   / ", "*  \\ /  ", "*   |   ", "*   |   ", "*   |   "],
+        'Z': ["/¯¯¯¯¯¯", "     / ", "    /  ", "   /   ", "  /    ", "/______"],
+        'L': ["|      ", "|      ", "|      ", "|      ", "|      ", "|______"],
+        'I': ["¯¯¯|¯¯¯", "   |   ", "   |   ", "   |   ", "   |   ", "___|___"],
+        'N': ["|\\    |", "| \\   |", "|  \\  |", "|   \\ |", "|    \\|", "|     |"],
+        'G': [" /¯¯¯¯ ", "/      ", "|  ____", "|     |", "\\     |", " \\____/"],
+        '-': ["       ", "       ", "_______", "       ", "       ", "       "],
+        'P': ["|¯¯¯¯\\ ", "|     |", "|____/ ", "|      ", "|      ", "|      "],
+        'T': ["¯¯¯¯|¯¯¯*", "    |   *", "    |   *", "    |   *", "    |   *", "    |   *"],
+    }
+    for i in range(6):
+        for letter in "YZLIN-GPT":
+            print(letters[letter][i], end="  ")
+        print() 
+    print("*"*82,"\n")
+
 with torch.no_grad():
     with ctx:
+        printFrontMatter()
+        user_input = input(f"{'\033[95m'}Enter the beginning of your story: {'\033[0m'}\n")
+        start_ids = encode(user_input)
+        x = torch.tensor(start_ids,dtype=torch.long,device=device).unsqueeze(0)
         for k in range(num_samples):
-            y = model.generate(x,max_new_tokens,top_k=top_k,tempreture=tempreture)
-            print(decode(y[0].tolist()))
-            print("----------")
+            y = model.generate(x,max_new_tokens,top_k=top_k,temperature=temperature)
+            total_story = decode(y[0].tolist())
+            print(f"{'\033[96m'}",total_story[:len(user_input)], f"{'\033[0m'}")
+            print(total_story[len(user_input):])
+        while True:
+            user_input = input(f"{'\033[95m'}input \"\\Continue\" or \"\\Exit\": {'\033[0m'}\n")
+            if user_input == "\\Continue":
+                start_ids = encode(total_story)
+                len_previous_story = len(total_story)
+                x = torch.tensor(start_ids,dtype=torch.long,device=device).unsqueeze(0)
+                for k in range(num_samples):
+                    y = model.generate(x,max_new_tokens,top_k=top_k,temperature=temperature)
+                    total_story = decode(y[0].tolist())
+                    print(f"{'\033[96m'}",total_story[:len_previous_story], f"{'\033[0m'}")
+                    print(total_story[len_previous_story:])
+            elif user_input == "\\Exit":
+                break
+        
