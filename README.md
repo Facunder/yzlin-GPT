@@ -1,5 +1,8 @@
 # yzlin-GPT
+
 FDU-2024-Autumn AI-Design Course Mid-Term Project
+
+复旦大学微电子学院2024年秋季学期课程《人工智能设计与应用》(课程代码SME637003)期中项目
 
 ## 0. Reference
 - https://github.com/rasbt/LLMs-from-scratch
@@ -32,6 +35,8 @@ FDU-2024-Autumn AI-Design Course Mid-Term Project
 的模型与训练配置下，使用https://huggingface.co/datasets/roneneldan/TinyStories/ 数据集中训练数据集的十分之一(约170M)作为输入文本数据，显存占用约11.6G，在单节点单卡3090上从头训练约8000次迭代约3小时后结束训练，利用此前最优模型进行推理可以进行简单文本故事续写。
 
 项目命名为GPT主要是因为参考NanoGPT的架构，并无处得到预训练数据微调，而是如上述从头训练。
+
+经过测试，当前的模型可以读入用户给的一句故事开头，多次生成较连贯而有意义的故事文本。
 
 ## 3. 测试方法
 - 仓库中已经包含checkpoint/checkpoint.pt，确保testInference.py正确读到模型路径，无需参数直接该脚本即可。
