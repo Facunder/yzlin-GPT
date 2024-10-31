@@ -23,6 +23,7 @@ FDU-2024-Autumn AI-Design Course Mid-Term Project
 ├── model.py # 模型定义文件
 ├── train.py # 训练脚本
 ├── testInference.py # 文本生成功能测试脚本
+├── requirements.txt # 由pipreqs生成的项目使用的库与版本
 ├── trainInfo.log # 训练过程记录
 └── README.md # 您正在看着
 ```
