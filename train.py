@@ -3,34 +3,37 @@ import numpy as np
 import torch
 import torch.nn as nn
 import math
-from model import ModelArgs, GPT
+from model import ModelArgs, yzlinGPT
 import time
 
 # Model parameters
-block_size = 128  # Block size for GPT2 is typically 1024
-batch_size = 32  # Tentative, will adjust based on memory usage
-n_layer = 12
-n_head = 6
+block_size = 128  # Block size for GPT2 is typically 1024, can not afford that much memory
+batch_size = 64  # Tentative, will adjust based on memory usage
+n_layer = 8
+n_head = 8
 n_embed = 768
 bias = False
 dropout = 0.0
-dataset_path = './data/sherlock'
+dataset_path = './datasets'
+print("dataset_path: ", dataset_path)
 init_from = 'scratch'  # 'scratch' or 'resume' - start training from scratch or resume
-checkpoint_save_dir = './checkpoints'
+checkpoint_save_dir = './checkpoint'
 eval_iters = 200
-eval_interval = 2000  # Evaluate and save checkpoint every n steps
+log_interval = 10
+eval_interval = 1000  # Evaluate and save checkpoint every n steps
 # Learning rate decay
 learning_rate = 6e-4
 warmup_iters = 2000
 lr_decay_iters = 8000
 min_lr = 6e-5
+gradient_accum_steps = 5 * 2
 # Optimizer parameters
-max_iters = 6000  # Train for a number of iterations
+max_iters = 600000  # Train for a number of iterations
 weight_decay = 1e-1
 betas = (0.9, 0.95)
 grad_clip = 1.0  # Gradient clipping
 # System settings
-device = 'cuda'
+device = 'cuda:3'
 device_type = 'cuda'
 dtype = 'bfloat16' if torch.cuda.is_available() and torch.cuda.is_bf16_supported() else 'float16'
 
@@ -44,7 +47,7 @@ def get_batch(split):
         data = np.memmap(os.path.join(data_dir, 'train.bin'), dtype=np.uint16, mode='r')
     else:
         data = np.memmap(os.path.join(data_dir, 'val.bin'), dtype=np.uint16, mode='r')
-    
+    # print(split, 'data shape:', data.shape)
     ix = torch.randint(len(data) - block_size, (batch_size,))
     x = torch.stack([torch.from_numpy((data[i:i + block_size].astype(np.int64))) for i in ix])
     y = torch.stack([torch.from_numpy((data[i + 1:i + 1 + block_size].astype(np.int64))) for i in ix])
@@ -62,7 +65,7 @@ assert init_from in ['scratch', 'resume']
 if init_from == 'scratch':
     print("Starting training from scratch")
     model_args['vocab_size'] = 50304
-    model = GPT(ModelArgs(**model_args))
+    model = yzlinGPT(ModelArgs(**model_args))
 
 elif init_from == 'resume':
     print("Resuming training")
@@ -70,7 +73,7 @@ elif init_from == 'resume':
     checkpoint = torch.load(ckpt_path, map_location=device)
     for key in ['n_layer', 'n_head', 'n_embed', 'block_size', 'bias', 'vocab_size']:
         model_args[key] = checkpoint['model_args'][key]
-    model = GPT(ModelArgs(**model_args))
+    model = yzlinGPT(ModelArgs(**model_args))
     model.load_state_dict(checkpoint['model'])
     iter_num = checkpoint['iter_num']
     best_val_loss = checkpoint['best_val_loss']
@@ -107,7 +110,6 @@ def get_lr(current_iter):
 
 X, Y = get_batch('train')
 t_start = time.time()
-
 while True:
     lr = get_lr(iter_num)
     for param_group in optimizer.param_groups:
@@ -126,9 +128,11 @@ while True:
         }
         torch.save(checkpoint, os.path.join(checkpoint_save_dir, 'checkpoint.pt'))
         print(f"Checkpoint saved at {checkpoint_save_dir}/checkpoint.pt")
-    
-    with ctx:
-        logits, loss = model(X, Y)
+    for micro_step in range(gradient_accum_steps):
+        with ctx:
+            logits, loss = model(X, Y)
+            loss = loss / gradient_accum_steps
+        X, Y = get_batch('train')
         scaler.scale(loss).backward()
     if grad_clip > 0.0:
         scaler.unscale_(optimizer)
@@ -136,8 +140,10 @@ while True:
     scaler.step(optimizer)
     scaler.update()
     optimizer.zero_grad(set_to_none=True)
+    if iter_num > 0 and iter_num % log_interval == 0:
+            print(f"iter:{iter_num},loss:{loss.item()*gradient_accum_steps}")
 
-    t_end = time.time()
+    # t_end = time.time()
     iter_num += 1
     if iter_num > max_iters:
         break
