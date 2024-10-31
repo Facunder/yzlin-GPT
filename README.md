@@ -29,12 +29,17 @@ FDU-2024-Autumn AI-Design Course Mid-Term Project
 
 [词嵌入维度768, 8层8头, 上文窗口128, batch大小64, 梯度累计10批]
 
-的模型与训练配置下，使用https://huggingface.co/datasets/roneneldan/TinyStories/ 数据集中训练数据集的十分之一(约170M)作为输入文本数据，显存占用约11.6G，从头训练约8000次迭代后结束训练，利用此前最优模型进行推理可以进行简单文本故事续写。
+的模型与训练配置下，使用https://huggingface.co/datasets/roneneldan/TinyStories/ 数据集中训练数据集的十分之一(约170M)作为输入文本数据，显存占用约11.6G，在单节点单卡3090上从头训练约8000次迭代约3小时后结束训练，利用此前最优模型进行推理可以进行简单文本故事续写。
+
+项目命名为GPT主要是因为参考NanoGPT的架构，并无处得到预训练数据微调，而是如上述从头训练。
 
 ## 3. 测试方法
 - 仓库中已经包含checkpoint/checkpoint.pt，确保testInference.py正确读到模型路径，无需参数直接该脚本即可。
 - 运行后会提示输入一小段文字作为故事开头，回车后模型自动续写20个单词
 - 根据提示选择继续续写或结束
+
+### 效果演示
+![](figures/GenTinyStory.png)
 
 ## 4. 注意
 - 由于只是用了TinyStories数据集进行训练，其中文本多为宝宝巴士级别短故事，内容比较没有深度，因此生成内容主要以编小故事为主。
@@ -199,3 +204,8 @@ FDU-2024-Autumn AI-Design Course Mid-Term Project
 
 - 训练过程中，每次达到评估间隔都会保存模型的状态，包括模型参数、优化器状态、当前迭代次数、最优验证损失等。
 - 支持从保存的检查点恢复训练，继续进行未完成的训练任务。
+
+
+## 7. 可能遇到的问题
+
+- 本项目在实验室内服务器节点上训练，无法连接HTTP加载GPT2 tokenizer，解决方法参考https://blog.csdn.net/yufanwenshu/article/details/142290067 已加入代码中。
