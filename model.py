@@ -8,12 +8,12 @@ import inspect
 from dataclasses import dataclass
 @dataclass
 class ModelArgs:
-    block_size: int = 1024  # Maximum input size
+    block_size: int = 512  # Maximum input size
     vocab_size: int = 50304  # GPT-2 vocab_size of 50257, padded to nearest multiple of 64 for efficiency
-    n_layer: int = 12
-    n_head: int = 12
+    n_layer: int = 8
+    n_head: int = 8
     n_embed: int = 768
-    dropout: float = 0.0  # Default no dropout
+    dropout: float = 0.0  # Default no dropout for pretrain
     bias: bool = True  # True: includes bias in Linears and LayerNorms, like GPT-2. False: slightly better and faster
 
 class RMSNorm(nn.Module):
@@ -98,7 +98,6 @@ class Block(nn.Module):
         return x + self.mlp(self.norm(x))  # Residual link
 
 class yzlinGPT(nn.Module):
-    # Hybrid of llama and GPT-2
     def __init__(self, args):
         super().__init__()
         
