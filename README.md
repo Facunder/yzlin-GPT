@@ -1,12 +1,55 @@
 # yzlin-GPT
 FDU-2024-Autumn AI-Design Course Mid-Term Project
 
-## Reference
+## 0. Reference
 - https://github.com/rasbt/LLMs-from-scratch
 - https://github.com/karpathy/nanoGPT/tree/master
 - https://github.com/REXWindW/my_llm
 
-## Model模型介绍
+## 1. 项目文件结构
+
+```plaintext
+.
+├── datasets/
+│   ├── TinyStories-cut.txt # 使用的文本数据
+│   ├── train.bin # TinyStories-cut.txt经过prepare.py得到训练数据
+│   └── val.bin # # TinyStories-cut.txt经过prepare.py得到验证数据
+├── checkpoint/
+│   └── checkpoint.pt # 训练后的模型，取val_loss最优模型保存
+├── prepare.py # txt文本数据处理脚本，用9:1生成训练与验证数据
+├── model.py # 模型定义文件
+├── train.py # 训练脚本
+├── testInference.py # 文本生成功能测试脚本
+├── trainInfo.log # 训练过程记录
+└── README.md # 您正在看着
+```
+
+## 2. 简介
+本项目主要参考NanoGPT架构格式与训练方法进行本项目，由于时间与显存限制，在
+
+[词嵌入维度768, 8层8头, 上文窗口128, batch大小64, 梯度累计10批]
+
+的模型与训练配置下，使用https://huggingface.co/datasets/roneneldan/TinyStories/ 数据集中训练数据集的十分之一(约170M)作为输入文本数据，显存占用约11.6G，从头训练约8000次迭代后结束训练，利用此前最优模型进行推理可以进行简单文本故事续写。
+
+## 3. 测试方法
+- 仓库中已经包含checkpoint/checkpoint.pt，确保testInference.py正确读到模型路径，无需参数直接该脚本即可。
+- 运行后会提示输入一小段文字作为故事开头，回车后模型自动续写20个单词
+- 根据提示选择继续续写或结束
+
+## 4. 注意
+- 由于只是用了TinyStories数据集进行训练，其中文本多为宝宝巴士级别短故事，内容比较没有深度，因此生成内容主要以编小故事为主。
+- 由于训练资源限制，窗口较小，模型功能比较弱，同一次运行多次继续生成后得到的故事容易内容割裂。
+- 上述问题也因为TinyStories数据集各故事也比较短，各故事间缺乏联系，模型倾向于完成一定故事内容描述后快速结束当前故事。
+- 此处因为时间有限而对小规模数据训练生成效果反不如TinyStories没有用更大数据量训练，
+- 如WikiText虽然内容比较有逻辑深度，但在只输入本项目可接受的文本量下训练效果实在不佳。
+- 可以用以下方法进行其他数据集的训练。
+
+### 新增文本训练
+将文本数据按照TinyStories-cut.txt格式处理好放在datasets/目录下，在yzlin-GPT/目录下直接运行prepare.py可以分离出训练与验证数据集置于datasets/下
+
+而后在train.py中根据需要修改训练参数训练即可，train.py中可以修改init_from选择是否从头训练。
+
+## 5. Model模型介绍
 
 以下内容对模型定义代码进行了介绍，包括各个模块的作用、结构以及相互之间的关系。该模型主要参考NanoGPT架构，加入了现代Transformer模型中的一些改进，如RMSNorm和FlashAttention。
 
@@ -87,7 +130,7 @@ FDU-2024-Autumn AI-Design Course Mid-Term Project
 - **`top_k` 采样**：如果指定了 `top_k`，则仅从前 `k` 个可能性中采样，以减少不常见词的干扰。
 - **输出**：将生成的 token 索引拼接到输入 `idx` 后，返回生成的完整 token 序列。
 
-## Train 训练过程
+## 6. Train 训练过程
 
 ### 1. 模型训练代码概述
 
