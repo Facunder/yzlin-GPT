@@ -1,0 +1,4 @@
+checkpoint/checkpoint.pt filter=lfs diff=lfs merge=lfs -text
+datasets/TinyStories-cut.txt filter=lfs diff=lfs merge=lfs -text
+datasets/train.bin filter=lfs diff=lfs merge=lfs -text
+datasets/val.bin filter=lfs diff=lfs merge=lfs -text
