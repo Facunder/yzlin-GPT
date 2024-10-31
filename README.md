@@ -13,6 +13,7 @@ FDU-2024-Autumn AI-Design Course Mid-Term Project
 
 ```plaintext
 .
+├── .tiktoken/ # 为解决服务器无法联网加载tokenizer问题，详见第7部分
 ├── datasets/
 │   ├── TinyStories-cut.txt # 使用的文本数据
 │   ├── train.bin # TinyStories-cut.txt经过prepare.py得到训练数据
