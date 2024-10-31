@@ -1,0 +1,4 @@
+numpy==2.1.2
+Requests==2.32.3
+tiktoken==0.7.0
+torch==2.2.0+cu121
